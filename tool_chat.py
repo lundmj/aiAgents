@@ -50,7 +50,7 @@ def load_knowledge_files(knowledge_names: list[str]) -> list[dict]:
 
 async def main(
     prompt_file: Path,
-    model_name: str = 'gpt-5-mini',
+    model_name: str = 'gpt-4.1',
     knowledge_names: list[str] = None
 ):
     TOOL_BOX = email_tool_box
