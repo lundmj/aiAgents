@@ -73,8 +73,14 @@ class Agent:
             self._history = self._history[excess:]
     
     async def run(self):
+        """
+        Start an interaction loop with the agent.
+
+        Inputs are read from stdin until an empty line or 'exit' is entered.
+        """
         while True:
             if self.prompt_user:
+                self.impose_history_limit()
                 user_msg = self.get_user_input()
                 if not user_msg:
                     break
@@ -87,4 +93,27 @@ class Agent:
             self.handle_tool_calls(response.output)
             if self.prompt_user or self.verbose:
                 print('AI:', response.output_text)
-            self.impose_history_limit()
+    
+    def chat_once(self, user_msg: str) -> str:
+        """
+        Send a single user message to the agent and return the response text.
+        """
+        self.append_history(
+            {'role': 'user', 'content': user_msg}
+        )
+
+        while True:
+            response = self.client.responses.create(
+                input=self.full_history,
+                model=self.model_name,
+                tools=self.tool_box.tools,
+            )
+            self._history += response.output
+            self.handle_tool_calls(response.output)
+
+            # If no more tool calls are required, break the loop
+            if not any(item.type == 'function_call' for item in response.output):
+                break
+
+        self.impose_history_limit()
+        return response.output_text
