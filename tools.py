@@ -7,7 +7,8 @@ from datetime import datetime
 
 from tool_box import ToolBox
 
-tool_box = ToolBox()
+email_tool_box = ToolBox()
+calendar_tool_box = ToolBox()
 
 SCOPES = ["https://www.googleapis.com/auth/calendar.events"]
 
@@ -73,7 +74,7 @@ def get_tz_name() -> str:
 
     return "UTC"
 
-@tool_box.tool
+@calendar_tool_box.tool
 def create_calendar_event(
     event_title: str,
     year: int,
@@ -136,7 +137,8 @@ def create_calendar_event(
     event = service.events().insert(calendarId="primary", body=event).execute()
     return event.get("htmlLink")
 
-@tool_box.tool
+@email_tool_box.tool
+@calendar_tool_box.tool
 def get_current_date(format: str = "%Y-%m-%d") -> str:
     """
     Returns the current date.
@@ -144,7 +146,7 @@ def get_current_date(format: str = "%Y-%m-%d") -> str:
     """
     return datetime.now().strftime(format)
 
-@tool_box.tool
+@email_tool_box.tool
 def send_email(to: str, subject: str, body: str) -> str:
     """
     Sends an email using SMTP.
@@ -188,7 +190,7 @@ def send_email(to: str, subject: str, body: str) -> str:
     except Exception as e:
         return f"Failure: {e}"
 
-@tool_box.tool
+@calendar_tool_box.tool
 def delete_calendar_event(event_id: str) -> str:
     """
     Deletes a Google Calendar event by its event_id.
@@ -205,7 +207,7 @@ def delete_calendar_event(event_id: str) -> str:
     except Exception as e:
         return f"Failure: Could not delete event with ID {event_id}. Error: {e}"
 
-@tool_box.tool
+@calendar_tool_box.tool
 def list_events_on_date(year: int, month: int, day: int) -> list:
     """
     Lists all events happening on a specific date.
@@ -260,7 +262,7 @@ def list_events_on_date(year: int, month: int, day: int) -> list:
     except Exception as e:
         return [{"error": f"Failure: Could not retrieve events. Error: {e}"}]
 
-@tool_box.tool
+@calendar_tool_box.tool
 def get_next_event() -> dict:
     """
     Retrieves the next upcoming event from the current time.
@@ -304,7 +306,7 @@ def get_next_event() -> dict:
     except Exception as e:
         return {"error": f"Failure: Could not retrieve the next event. Error: {e}"}
 
-@tool_box.tool
+@calendar_tool_box.tool
 def update_calendar_event(
     event_id: str,
     new_title: str = None,

@@ -4,7 +4,7 @@ import sys
 import argparse
 from pathlib import Path
 from openai import AsyncOpenAI
-from tools import tool_box
+from tools import calendar_tool_box, email_tool_box
 
 def load_knowledge_files(knowledge_names: list[str]) -> list[dict]:
     """
@@ -53,6 +53,8 @@ async def main(
     model_name: str = 'gpt-5-mini',
     knowledge_names: list[str] = None
 ):
+    TOOL_BOX = email_tool_box
+    # TOOL_BOX = calendar_tool_box
     client = AsyncOpenAI()
     prompt = prompt_file.read_text()
 
@@ -76,7 +78,7 @@ async def main(
         response = await client.responses.create(
             input=history,
             model=model_name,
-            tools=tool_box.tools
+            tools=TOOL_BOX.tools
         )
 
         history += response.output
@@ -86,7 +88,7 @@ async def main(
         for item in response.output:
             if item.type == "function_call":
                 print(f'>>> Calling {item.name} with args {item.arguments}')
-                if func := tool_box.get_tool_function(item.name):
+                if func := TOOL_BOX.get_tool_function(item.name):
                     result = func(**json.loads(item.arguments))
 
                     print(f'>>> {item.name} returned {result}')
