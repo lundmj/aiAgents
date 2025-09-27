@@ -1,10 +1,55 @@
 import asyncio
+from os import environ
 import json
 import sys
 import argparse
+from datetime import datetime
 from pathlib import Path
 from openai import AsyncOpenAI
-from tools import tool_box
+
+from tool_box import ToolBox
+
+tool_box = ToolBox()
+
+
+@tool_box.tool
+def get_current_date(fmt: str = "%Y-%m-%d") -> str:
+    """
+    Returns the current date.
+    If fmt is not specified, returns %Y-%m-%d.
+    (fmt stands for format.)
+    """
+    return datetime.now().strftime(fmt)
+
+@tool_box.tool
+def send_email(to: str, subject: str, body: str) -> str:
+    """
+    Sends an email using SMTP.
+    to: recipient email address
+    subject: email subject
+    body: email body text
+    """
+    import smtplib
+    from email.message import EmailMessage
+
+    msg = EmailMessage()
+    msg.set_content(body)
+    msg['Subject'] = subject
+    msg['From'] = environ.get('GMAIL_APP_USER', '')
+    msg['To'] = to
+
+    try:
+        with smtplib.SMTP('smtp.gmail.com', 587, timeout=10) as s:
+            s.starttls()
+            s.login(
+                environ.get('GMAIL_APP_USER', ''),
+                environ.get('GMAIL_APP_PASSWORD', '')
+            )
+            s.send_message(msg)
+        return "Email sent successfully"
+    except Exception as e:
+        return f"Failed to send email: {e}"
+
 
 def load_knowledge_files(knowledge_names: list[str]) -> list[dict]:
     """
@@ -48,11 +93,7 @@ def load_knowledge_files(knowledge_names: list[str]) -> list[dict]:
     return messages
 
 
-async def main(
-    prompt_file: Path,
-    model_name: str = 'gpt-5-mini',
-    knowledge_names: list[str] = None
-):
+async def main(prompt_file: Path, model_name: str = 'gpt-5-mini', knowledge_names: list[str] = None):
     client = AsyncOpenAI()
     prompt = prompt_file.read_text()
 
