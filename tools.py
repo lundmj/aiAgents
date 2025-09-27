@@ -7,10 +7,10 @@ from datetime import datetime
 
 from tool_box import ToolBox
 
+SCOPES = ["https://www.googleapis.com/auth/calendar.events"]
+
 email_tool_box = ToolBox()
 calendar_tool_box = ToolBox()
-
-SCOPES = ["https://www.googleapis.com/auth/calendar.events"]
 
 def get_creds():
     """
