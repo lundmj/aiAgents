@@ -139,10 +139,10 @@ def create_calendar_event(
 
 @email_tool_box.tool
 @calendar_tool_box.tool
-def get_current_date(format: str = "%Y-%m-%d") -> str:
+def get_current_datetime(format: str = "%Y-%m-%d %H:%M:%S") -> str:
     """
-    Returns the current date.
-    If format is not specified, returns %Y-%m-%d.
+    Returns the current date and time.
+    If format is not specified, returns '%Y-%m-%d %H:%M:%S'.
     """
     return datetime.now().strftime(format)
 

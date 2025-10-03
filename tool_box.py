@@ -4,8 +4,6 @@ from typing import Any, Callable, get_type_hints, Literal, get_origin, get_args,
 
 from openai.types.responses import FunctionToolParam
 
-_tools: dict[str, Callable] = {}
-
 
 def _is_optional(annotation) -> bool:
     origin = get_origin(annotation)
@@ -87,9 +85,50 @@ class ToolBox:
         self.tools = []
 
     def tool(self, func):
-        self._funcs[func.__name__] = func
+        import functools
+        import os
+        from datetime import datetime
+
+        log_path = os.path.join(os.path.dirname(__file__), "tool_calls.log")
+
+        @functools.wraps(func)
+        def wrapper(*args, **kwargs):
+            ts = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            entry = {
+            "timestamp": ts,
+            "tool": func.__name__,
+            "args": args,
+            "kwargs": kwargs,
+            }
+            try:
+                result = func(*args, **kwargs)
+                entry["result"] = result
+            except Exception as e:
+                entry["error"] = str(e)
+                log_message = (
+                    f"[{entry['timestamp']}] Tool: {entry['tool']}\n"
+                    f"  Args: {entry['args']}\n"
+                    f"  Kwargs: {entry['kwargs']}\n"
+                    f"  Error: {entry['error']}\n"
+                    "----------------------------------------\n"
+                )
+                with open(log_path, "a") as f:
+                    f.write(log_message)
+                raise
+            log_message = (
+            f"[{entry['timestamp']}] Tool: {entry['tool']}\n"
+            f"  Args: {entry['args']}\n"
+            f"  Kwargs: {entry['kwargs']}\n"
+            f"  Result: {entry['result']}\n"
+            "----------------------------------------\n"
+            )
+            with open(log_path, "a") as f:
+                f.write(log_message)
+            return entry.get("result")
+
+        self._funcs[func.__name__] = wrapper
         self.tools.append(generate_function_schema(func))
-        return func
+        return wrapper
 
     def get_tool_function(self, tool_name: str) -> Callable | None:
         return self._funcs.get(tool_name)
