@@ -1,5 +1,5 @@
-from math import inf
 import json
+import asyncio
 from pathlib import Path
 
 from openai import AsyncOpenAI
@@ -31,17 +31,17 @@ class Agent:
 
     def reset(self):
         self._history = []
-        self.prompt_user = True
-
-    def append_history(self, message: dict):
-        self._history.append(message)
+    
+    def print_if_verbose(self, message: str):
+        if self.verbose:
+            print(message)
 
     @property
     def full_history(self) -> list[dict]:
         return self._system_msgs + self._history
 
     def get_user_input(self):
-        if (user_msg := input('User: ')) == "exit":
+        if (user_msg := input('> ')) == "exit":
             return ""
         return user_msg
 
@@ -49,18 +49,16 @@ class Agent:
         return await self.client.responses.create(
             input=self.full_history,
             model=self.model_name,
-            tools=self.tool_box.tools,
+            tools=self.tool_box.tools if self.tool_box else None,
         )
 
     def handle_tool_calls(self, response_output):
         for item in response_output:
             if item.type == "function_call":
-                if self.verbose:
-                    print(f'>>> Calling {item.name} with args {item.arguments}')
+                self.print_if_verbose(f'>>> Calling {item.name} with args {item.arguments}')
                 if func := self.tool_box.get_tool_function(item.name):
                     result = func(**json.loads(item.arguments))
-                    if self.verbose:
-                        print(f'>>> {item.name} returned {result}')
+                    self.print_if_verbose(f'>>> {item.name} returned {result}')
                     self._history.append({
                         "type": "function_call_output",
                         "call_id": item.call_id,
@@ -71,49 +69,29 @@ class Agent:
         excess = len(self._history) - self.history_limit
         if excess > 0:
             self._history = self._history[excess:]
-    
-    async def run(self):
+
+    async def run(self, response_fn=lambda *args: print('\n', *args, end=f'\n{'-'*60}\n\n')):
         """
         Start an interaction loop with the agent.
 
         Inputs are read from stdin until an empty line or 'exit' is entered.
         """
-        while True:
-            if self.prompt_user:
-                self.impose_history_limit()
-                user_msg = self.get_user_input()
-                if not user_msg:
-                    break
-                self.append_history(
-                    {'role': 'user', 'content': user_msg}
-                )
-            response = await self.get_agent_response()
-            self._history += response.output
-            self.prompt_user = not any(item.type == 'function_call' for item in response.output)
-            self.handle_tool_calls(response.output)
-            if self.prompt_user or self.verbose:
-                print('AI:', response.output_text)
+        while user_msg := self.get_user_input():
+            response_fn('AI:', await self.chat_once(user_msg))
     
-    def chat_once(self, user_msg: str) -> str:
+    async def chat_once(self, user_msg: str) -> str:
         """
         Send a single user message to the agent and return the response text.
         """
-        self.append_history(
-            {'role': 'user', 'content': user_msg}
-        )
-
+        self._history += [{'role': 'user', 'content': user_msg}]
+        
         while True:
-            response = self.client.responses.create(
-                input=self.full_history,
-                model=self.model_name,
-                tools=self.tool_box.tools,
-            )
+            response = await self.get_agent_response()
             self._history += response.output
+            if not any(
+                item.type == 'function_call' for item in response.output
+            ): break
             self.handle_tool_calls(response.output)
-
-            # If no more tool calls are required, break the loop
-            if not any(item.type == 'function_call' for item in response.output):
-                break
 
         self.impose_history_limit()
         return response.output_text
