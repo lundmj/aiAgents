@@ -1,12 +1,12 @@
 from fastmcp import FastMCP
 import uvicorn
 
-mcp = FastMCP("Demo 🚀")
+mcp = FastMCP("Assistant tools")
 
 @mcp.tool
-def add(a: int, b: int) -> int:
-    """Add two numbers"""
-    return a + b
+def greet(name: str) -> str:
+    """Greet a person by name"""
+    return f"Hello, {name}!"
 
 app = mcp.http_app()
 
