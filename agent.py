@@ -15,7 +15,7 @@ class Agent:
         tool_box: ToolBox = None,
         verbose: bool = False,
     ):
-        self._client = AsyncOpenAI()
+        self.client = AsyncOpenAI()
         self._model_name = model_name
         self._tool_box = tool_box
         self._prompt = prompt_file.read_text()
@@ -38,7 +38,7 @@ class Agent:
         return user_msg
 
     async def _get_agent_response(self):
-        return await self._client.responses.create(
+        return await self.client.responses.create(
             input=self.full_history,
             model=self._model_name,
             tools=self._tool_box.tools if self._tool_box else None,
