@@ -23,6 +23,7 @@ async def main(
         verbose=verbose,
     )
     await agent.run()
+    print('\n' + "#"*60 + '\n')
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(add_help=False)
