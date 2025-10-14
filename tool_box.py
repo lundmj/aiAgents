@@ -135,14 +135,8 @@ class ToolBox:
         return self._funcs.get(tool_name)
     
     def __or__(self, other: "ToolBox") -> "ToolBox":
-        """
-        Return a new ToolBox representing the union of self and other.
-
-        On name conflict, values from `other` (right-hand operand) win, similar to
-        how dictionary unpacking or `dict1 | dict2` behaves.
-        """
         if not isinstance(other, ToolBox):
-            return NotImplemented
+            raise TypeError("Operand must be a ToolBox")
 
         merged = ToolBox()
         # start with a shallow copy of left-hand tools and schemas
@@ -162,7 +156,6 @@ class ToolBox:
         return merged
 
     def __ior__(self, other: "ToolBox") -> "ToolBox":
-        """In-place union: modify self so that right-hand tools win on conflict."""
         merged = self | other
         self._funcs = merged._funcs
         self.tools = merged.tools
