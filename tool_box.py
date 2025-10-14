@@ -134,9 +134,11 @@ class ToolBox:
     def get_tool_function(self, tool_name: str) -> Callable | None:
         return self._funcs.get(tool_name)
     
-    def __or__(self, other: "ToolBox") -> "ToolBox":
+    def __or__(self, other: "ToolBox | None") -> "ToolBox":
+        if other is None:
+            return copy.deepcopy(self)
         if not isinstance(other, ToolBox):
-            raise TypeError("Operand must be a ToolBox")
+            raise TypeError("Operand must be a ToolBox or None")
 
         merged = ToolBox()
         # start with a shallow copy of left-hand tools and schemas
@@ -155,7 +157,9 @@ class ToolBox:
 
         return merged
 
-    def __ior__(self, other: "ToolBox") -> "ToolBox":
+    def __ior__(self, other: "ToolBox | None") -> "ToolBox":
+        if other is None:
+            return self
         merged = self | other
         self._funcs = merged._funcs
         self.tools = merged.tools

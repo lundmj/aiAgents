@@ -8,7 +8,13 @@ from tool_box import ToolBox
 
 class Agent:
     """
-    
+    A self-sufficient AI agent that can be interacted with via a chat interface.
+
+    - Calling `run()` starts an interaction loop reading from stdin.
+    - Calling `chat_once(user_msg)` sends a single message and returns the response.
+    - Calling `reset()` clears all chat history.
+
+    Both `run` and `chat_once` track history up to `history_limit` messages.
     """
 
     def __init__(self,
@@ -80,8 +86,7 @@ class Agent:
     def reset(self):
         self._history = []
     
-    async def run(
-        self,
+    async def run(self,
         callback=lambda *args: print(
             '\nAI:', *args, end=f'\n{'-'*60}\n\n'
         )
