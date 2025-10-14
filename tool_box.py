@@ -1,6 +1,7 @@
 import inspect
 from types import UnionType
 from typing import Any, Callable, get_type_hints, Literal, get_origin, get_args, Union
+import copy
 
 from openai.types.responses import FunctionToolParam
 
@@ -132,3 +133,37 @@ class ToolBox:
 
     def get_tool_function(self, tool_name: str) -> Callable | None:
         return self._funcs.get(tool_name)
+    
+    def __or__(self, other: "ToolBox") -> "ToolBox":
+        """
+        Return a new ToolBox representing the union of self and other.
+
+        On name conflict, values from `other` (right-hand operand) win, similar to
+        how dictionary unpacking or `dict1 | dict2` behaves.
+        """
+        if not isinstance(other, ToolBox):
+            return NotImplemented
+
+        merged = ToolBox()
+        # start with a shallow copy of left-hand tools and schemas
+        for name, wrapper in self._funcs.items():
+            merged._funcs[name] = wrapper
+        for schema in self.tools:
+            merged.tools.append(copy.deepcopy(schema))
+
+        # overlay with right-hand tools (overwrite on conflict)
+        for schema in other.tools:
+            name = schema["name"]
+            merged._funcs[name] = other._funcs[name]
+            # remove any existing schema with the same name
+            merged.tools = [s for s in merged.tools if s["name"] != name]
+            merged.tools.append(copy.deepcopy(schema))
+
+        return merged
+
+    def __ior__(self, other: "ToolBox") -> "ToolBox":
+        """In-place union: modify self so that right-hand tools win on conflict."""
+        merged = self | other
+        self._funcs = merged._funcs
+        self.tools = merged.tools
+        return self

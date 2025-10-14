@@ -11,14 +11,12 @@ async def main(
     prompt_file: Path,
     history_limit: int,
     model_name: str = 'gpt-4.1',
-    knowledge_names: list[str] = None,
     verbose: bool = False,
 ):
     agent = Agent(
         prompt_file=prompt_file,
         history_limit=history_limit,
         model_name=model_name,
-        knowledge_names=knowledge_names,
         tool_box=TOOL_BOX,
         verbose=verbose,
     )
@@ -39,10 +37,6 @@ if __name__ == '__main__':
         type=str, default='gpt-5-mini', dest='model',
         help='model name to use',
     )
-    parser.add_argument('-k', '--knowledge',
-        type=str, default='', dest='knowledge',
-        help='comma-separated list of filenames or directories to include as knowledge',
-    )
     parser.add_argument('-v', '--verbose',
         action='store_true', dest='verbose',
         help='enable verbose output',
@@ -54,12 +48,9 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    knowledge_list = [k.strip() for k in args.knowledge.split(',')] if args.knowledge else []
-
     asyncio.run(main(
         Path(sys.argv[1]),
         args.history_limit,
         model_name=args.model,
-        knowledge_names=knowledge_list,
         verbose=args.verbose,
     ))

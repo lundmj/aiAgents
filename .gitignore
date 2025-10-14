@@ -3,3 +3,6 @@ __pycache__
 creds.json
 token.json
 *.log
+db
+products_helioforge
+reference

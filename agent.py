@@ -7,11 +7,14 @@ from tool_box import ToolBox
 
 
 class Agent:
+    """
+    
+    """
+
     def __init__(self,
         prompt_file: Path,
         history_limit: int,
         model_name: str = 'gpt-4.1',
-        knowledge_names: list[str] = None,
         tool_box: ToolBox = None,
         verbose: bool = False,
     ):
@@ -21,16 +24,13 @@ class Agent:
         self._prompt = prompt_file.read_text()
         self._history_limit = history_limit
         self._verbose = verbose
-        self._system_msgs = [{'role': 'system', 'content': self._prompt}]
-        if knowledge_names:
-            from knowledge import load_knowledge_files
-            self._system_msgs += load_knowledge_files(knowledge_names)
+        self._system_message = { 'role': 'system', 'content': self._prompt }
 
         self.reset()
 
     @property
     def full_history(self) -> list[dict]:
-        return self._system_msgs + self._history
+        return [self._system_message] + self._history
 
     def _get_user_input(self):
         if (user_msg := input('> ')) == "exit":
@@ -64,7 +64,7 @@ class Agent:
         """
         Send a single user message to the agent and return the response text.
         """
-        self._history += [{'role': 'user', 'content': user_msg}]
+        self._history += [{ 'role': 'user', 'content': user_msg }]
         
         while True:
             response = await self._get_agent_response()
@@ -80,7 +80,12 @@ class Agent:
     def reset(self):
         self._history = []
     
-    async def run(self, callback=lambda *args: print('\nAI:', *args, end=f'\n{'-'*60}\n\n')):
+    async def run(
+        self,
+        callback=lambda *args: print(
+            '\nAI:', *args, end=f'\n{'-'*60}\n\n'
+        )
+    ):
         """
         Start an interaction loop with the agent.
 
