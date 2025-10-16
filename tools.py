@@ -17,15 +17,15 @@ def get_creds():
     Retrieves Google API credentials, refreshing or generating them if necessary.
     """
     creds = None
-    if os.path.exists("token.json"):
-        creds = Credentials.from_authorized_user_file("token.json", SCOPES)
+    if os.path.exists("credentials/token.json"):
+        creds = Credentials.from_authorized_user_file("credentials/token.json", SCOPES)
     if not creds or not creds.valid:
         if creds and creds.expired and creds.refresh_token:
             creds.refresh(Request())
         else:
-            flow = InstalledAppFlow.from_client_secrets_file("creds.json", SCOPES)
+            flow = InstalledAppFlow.from_client_secrets_file("credentials/creds.json", SCOPES)
             creds = flow.run_local_server(port=0)
-        with open("token.json", "w") as token:
+        with open("credentials/token.json", "w") as token:
             token.write(creds.to_json())
     return creds
 

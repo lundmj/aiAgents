@@ -1,7 +1,6 @@
 import json
-import asyncio
 from pathlib import Path
-from openai import AsyncOpenAI, OpenAI
+from openai import OpenAI
 
 from tool_box import ToolBox
 

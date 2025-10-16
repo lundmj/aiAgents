@@ -1,8 +1,8 @@
 __pycache__
 \!reports
-creds.json
-token.json
-*.log
+credentials
 db
 products_helioforge
+scratch_files
+log
 reference

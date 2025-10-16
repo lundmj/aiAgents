@@ -77,6 +77,7 @@ def generate_function_schema(func: Callable[..., Any]) -> FunctionToolParam:
         "strict": True
     }
 
+TOOL_CALL_LOG_DIR = "log"
 
 class ToolBox:
     tools: list[FunctionToolParam]
@@ -94,7 +95,11 @@ class ToolBox:
         if func is None:
             return lambda f: self.tool(f, name=name)
 
-        log_path = os.path.join(os.path.dirname(__file__), "tool_calls.log")
+        log_path = os.path.join(
+            os.path.dirname(__file__),
+            TOOL_CALL_LOG_DIR,
+            "tool_calls.log"
+        )
 
         @functools.wraps(func)
         def wrapper(*args, **kwargs):
