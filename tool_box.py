@@ -85,10 +85,14 @@ class ToolBox:
         self._funcs = {}
         self.tools = []
 
-    def tool(self, func):
+    def tool(self, func: Callable | None = None, *, name: str | None = None):
         import functools
         import os
         from datetime import datetime
+
+        # support both decorator and direct-call forms
+        if func is None:
+            return lambda f: self.tool(f, name=name)
 
         log_path = os.path.join(os.path.dirname(__file__), "tool_calls.log")
 
@@ -96,10 +100,10 @@ class ToolBox:
         def wrapper(*args, **kwargs):
             ts = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             entry = {
-            "timestamp": ts,
-            "tool": func.__name__,
-            "args": args,
-            "kwargs": kwargs,
+                "timestamp": ts,
+                "tool": func.__name__,
+                "args": args,
+                "kwargs": kwargs,
             }
             try:
                 result = func(*args, **kwargs)
@@ -117,18 +121,27 @@ class ToolBox:
                     f.write(log_message)
                 raise
             log_message = (
-            f"[{entry['timestamp']}] Tool: {entry['tool']}\n"
-            f"  Args: {entry['args']}\n"
-            f"  Kwargs: {entry['kwargs']}\n"
-            f"  Result: {entry['result']}\n"
-            "----------------------------------------\n"
+                f"[{entry['timestamp']}] Tool: {entry['tool']}\n"
+                f"  Args: {entry['args']}\n"
+                f"  Kwargs: {entry['kwargs']}\n"
+                f"  Result: {entry['result']}\n"
+                "----------------------------------------\n"
             )
             with open(log_path, "a") as f:
                 f.write(log_message)
             return entry.get("result")
 
-        self._funcs[func.__name__] = wrapper
-        self.tools.append(generate_function_schema(func))
+        # register under an explicit name if provided, else use the function's name
+        reg_name = name or func.__name__
+        wrapper.__name__ = reg_name
+
+        self._funcs[reg_name] = wrapper
+
+        # generate schema from original func but override the name so it is unique
+        schema = generate_function_schema(func)
+        schema["name"] = reg_name
+        self.tools.append(copy.deepcopy(schema))
+
         return wrapper
 
     def get_tool_function(self, tool_name: str) -> Callable | None:

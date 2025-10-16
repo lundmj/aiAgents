@@ -1,7 +1,7 @@
 import json
 import asyncio
 from pathlib import Path
-from openai import AsyncOpenAI
+from openai import AsyncOpenAI, OpenAI
 
 from tool_box import ToolBox
 
@@ -22,29 +22,63 @@ class Agent:
         history_limit: int,
         model_name: str = 'gpt-4.1',
         tool_box: ToolBox = None,
+        helper_agents: list['Agent'] = [],
+        description: str = 'A helpful assistant.',
         verbose: bool = False,
     ):
-        self.client = AsyncOpenAI()
+        self.client = OpenAI()
         self._model_name = model_name
         self._tool_box = tool_box
+        self._helper_agents = helper_agents
         self._prompt = prompt_file.read_text()
         self._history_limit = history_limit
+        self._description = description
         self._verbose = verbose
-        self._system_message = { 'role': 'system', 'content': self._prompt }
+        self._system_messages = [{ 'role': 'system', 'content': self._prompt }]
 
+        self._add_helper_agents()
         self.reset()
 
     @property
     def full_history(self) -> list[dict]:
-        return [self._system_message] + self._history
+        return self._system_messages + self._history
+
+    def _add_helper_agents(self):
+        if not self._helper_agents: return
+        agent_tool_box = ToolBox()
+        for i, agent in enumerate(self._helper_agents, start=1):
+            # Build a unique tool name per helper agent to avoid collisions
+            unique_name = f"{agent.__class__.__name__}_chat_once_{i}"
+            desc_suffix = f"\n\nDescription: {agent._description}"
+
+            # Instead of mutating the underlying class function's __doc__ (which is
+            # shared by all instances), create a small wrapper for this agent's
+            # bound method so we can give the tool its own docstring.
+            import functools
+
+            def make_wrapper(bound_method, doc):
+                @functools.wraps(bound_method)
+                def wrapper(*args, **kwargs):
+                    return bound_method(*args, **kwargs)
+                try:
+                    wrapper.__doc__ = (bound_method.__doc__ or "") + doc
+                except Exception:
+                    # If we can't set the docstring, continue without failing.
+                    pass
+                return wrapper
+
+            wrapper = make_wrapper(agent.chat_once, desc_suffix)
+            # Register the wrapper under a unique name so multiple helpers don't collide
+            agent_tool_box.tool(wrapper, name=unique_name)
+        self._tool_box = agent_tool_box | self._tool_box
 
     def _get_user_input(self):
         if (user_msg := input('> ')) == "exit":
             return ""
         return user_msg
 
-    async def _get_agent_response(self):
-        return await self.client.responses.create(
+    def _get_agent_response(self):
+        return self.client.responses.create(
             input=self.full_history,
             model=self._model_name,
             tools=self._tool_box.tools if self._tool_box else None,
@@ -66,14 +100,16 @@ class Agent:
         if excess > 0:
             self._history = self._history[excess:]
 
-    async def _chat_once_async(self, user_msg: str) -> str:
+    def chat_once(self, user_msg: str) -> str:
         """
-        Send a single user message to the agent and return the response text.
+        Send a message to the agent.
+
+        Returns the agent's response text.
         """
         self._history += [{ 'role': 'user', 'content': user_msg }]
         
         while True:
-            response = await self._get_agent_response()
+            response = self._get_agent_response()
             self._history += response.output
             if not any(
                 item.type == 'function_call' for item in response.output
@@ -97,10 +133,5 @@ class Agent:
         Inputs are read from stdin until an empty line or 'exit' is entered.
         """
         while user_msg := self._get_user_input():
-            callback(await self._chat_once_async(user_msg))
-    
-    def chat_once(self, user_msg: str) -> str:
-        """
-        Synchronous wrapper for chat_once_async.
-        """
-        return asyncio.run(self._chat_once_async(user_msg))
+            callback(self.chat_once(user_msg))
+
