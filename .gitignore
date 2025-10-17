@@ -6,3 +6,4 @@ products_helioforge
 scratch_files
 log
 reference
+.env

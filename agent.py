@@ -1,6 +1,8 @@
 import json
 from pathlib import Path
 from openai import OpenAI
+from dotenv import load_dotenv
+load_dotenv()
 
 from tool_box import ToolBox
 
@@ -121,7 +123,7 @@ class Agent:
     def reset(self):
         self._history = []
     
-    async def run(self,
+    def run(self,
         callback=lambda *args: print(
             '\nAI:', *args, end=f'\n{'-'*60}\n\n'
         )
