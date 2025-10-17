@@ -1,8 +1,8 @@
 import json
+import functools
 from pathlib import Path
 from openai import OpenAI
-from dotenv import load_dotenv
-load_dotenv()
+from param import Callable as function
 
 from tool_box import ToolBox
 
@@ -52,11 +52,6 @@ class Agent:
             unique_name = f"{agent.__class__.__name__}_chat_once_{i}"
             desc_suffix = f"\n\nDescription: {agent._description}"
 
-            # Instead of mutating the underlying class function's __doc__ (which is
-            # shared by all instances), create a small wrapper for this agent's
-            # bound method so we can give the tool its own docstring.
-            import functools
-
             def make_wrapper(bound_method, doc):
                 @functools.wraps(bound_method)
                 def wrapper(*args, **kwargs):
@@ -64,12 +59,10 @@ class Agent:
                 try:
                     wrapper.__doc__ = (bound_method.__doc__ or "") + doc
                 except Exception:
-                    # If we can't set the docstring, continue without failing.
                     pass
                 return wrapper
 
             wrapper = make_wrapper(agent.chat_once, desc_suffix)
-            # Register the wrapper under a unique name so multiple helpers don't collide
             agent_tool_box.tool(wrapper, name=unique_name)
         self._tool_box = agent_tool_box | self._tool_box
 
@@ -101,6 +94,22 @@ class Agent:
         if excess > 0:
             self._history = self._history[excess:]
 
+    def reset(self):
+        self._history = []
+    
+    def run(self,
+        callback: function = lambda *args: print(
+            '\nAI:', *args, end=f'\n{'-'*60}\n\n'
+        )
+    ):
+        """
+        Start an interaction loop with the agent.
+
+        Inputs are read from stdin until an empty line or 'exit' is entered.
+        """
+        while user_msg := self._get_user_input():
+            callback(self.chat_once(user_msg))
+    
     def chat_once(self, user_msg: str) -> str:
         """
         Send a message to the agent.
@@ -120,19 +129,4 @@ class Agent:
         self._impose_history_limit()
         return response.output_text
     
-    def reset(self):
-        self._history = []
-    
-    def run(self,
-        callback=lambda *args: print(
-            '\nAI:', *args, end=f'\n{'-'*60}\n\n'
-        )
-    ):
-        """
-        Start an interaction loop with the agent.
-
-        Inputs are read from stdin until an empty line or 'exit' is entered.
-        """
-        while user_msg := self._get_user_input():
-            callback(self.chat_once(user_msg))
 
