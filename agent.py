@@ -1,8 +1,9 @@
 import json
 import functools
+from collections import deque
 from pathlib import Path
 from openai import OpenAI
-from param import Callable as function
+from typing import Callable, Optional
 
 from tool_box import ToolBox
 
@@ -42,29 +43,38 @@ class Agent:
 
     @property
     def full_history(self) -> list[dict]:
-        return self._system_messages + self._history
+        # self._history is a deque; convert to list for concatenation
+        return self._system_messages + list(self._history)
 
     def _add_helper_agents(self):
         if not self._helper_agents: return
         agent_tool_box = ToolBox()
         for i, agent in enumerate(self._helper_agents, start=1):
-            # Build a unique tool name per helper agent to avoid collisions
-            unique_name = f"{agent.__class__.__name__}_chat_once_{i}"
-            desc_suffix = f"\n\nDescription: {agent._description}"
-
-            def make_wrapper(bound_method, doc):
-                @functools.wraps(bound_method)
-                def wrapper(*args, **kwargs):
-                    return bound_method(*args, **kwargs)
-                try:
-                    wrapper.__doc__ = (bound_method.__doc__ or "") + doc
-                except Exception:
-                    pass
-                return wrapper
-
-            wrapper = make_wrapper(agent.chat_once, desc_suffix)
-            agent_tool_box.tool(wrapper, name=unique_name)
+            name, wrapper = self._build_agent_tool(agent, i)
+            agent_tool_box.tool(wrapper, name=name)
         self._tool_box = agent_tool_box | self._tool_box
+
+    def _build_agent_tool(self, agent: "Agent", index: int) -> tuple[str, Callable]:
+        """Create a uniquely named wrapper for a helper agent's chat_once.
+
+        Returns (unique_name, wrapper_callable). The wrapper forwards calls to
+        the helper's bound method and has its own docstring (so descriptions
+        don't accumulate on a shared function object).
+        """
+        unique_name = f"{agent.__class__.__name__}_chat_once_{index}"
+        desc_suffix = f"\n\nDescription: {agent._description}"
+
+        @functools.wraps(agent.chat_once)
+        def wrapper(*args, **kwargs):
+            return agent.chat_once(*args, **kwargs)
+
+        try:
+            wrapper.__doc__ = (agent.chat_once.__doc__ or "") + desc_suffix
+        except Exception:
+            # Non-fatal: continue even if docstring can't be set
+            pass
+
+        return unique_name, wrapper
 
     def _get_user_input(self):
         if (user_msg := input('> ')) == "exit":
@@ -89,26 +99,31 @@ class Agent:
                         "output": json.dumps(result)
                     })
     
-    def _impose_history_limit(self):
-        excess = len(self._history) - self._history_limit
-        if excess > 0:
-            self._history = self._history[excess:]
 
     def reset(self):
-        self._history = []
+        # Use deque to automatically enforce history length (maxlen)
+        self._history = deque(maxlen=self._history_limit)
     
     def run(self,
-        callback: function = lambda *args: print(
-            '\nAI:', *args, end=f'\n{'-'*60}\n\n'
-        )
+        callback: Optional[Callable] = None,
     ):
         """
         Start an interaction loop with the agent.
 
         Inputs are read from stdin until an empty line or 'exit' is entered.
         """
-        while user_msg := self._get_user_input():
-            callback(self.chat_once(user_msg))
+        # Provide a sensible default callback if none was supplied
+        if callback is None:
+            def _default_cb(*args):
+                print('\nAI:', *args, end=f"\n{'-'*60}\n\n")
+            callback = _default_cb
+
+        try:
+            while user_msg := self._get_user_input():
+                callback(self.chat_once(user_msg))
+        except KeyboardInterrupt:
+            # Graceful exit on Ctrl-C
+            print('\nRun interrupted by user (KeyboardInterrupt)')
     
     def chat_once(self, user_msg: str) -> str:
         """
@@ -116,17 +131,25 @@ class Agent:
 
         Returns the agent's response text.
         """
-        self._history += [{ 'role': 'user', 'content': user_msg }]
-        
+        # append the user message (deque enforces maxlen)
+        self._history.append({ 'role': 'user', 'content': user_msg })
+
         while True:
             response = self._get_agent_response()
-            self._history += response.output
+            # response.output is a list-like sequence of message pieces; extend the deque
+            try:
+                self._history.extend(response.output)
+            except TypeError:
+                # fallback: append the whole output if it's not iterable
+                self._history.append(response.output)
+
             if not any(
                 item.type == 'function_call' for item in response.output
-            ): break
+            ):
+                break
             self._handle_tool_calls(response.output)
 
-        self._impose_history_limit()
+        # history length is enforced by deque(maxlen=...)
         return response.output_text
     
 
