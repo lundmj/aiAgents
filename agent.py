@@ -21,7 +21,7 @@ class Agent:
 
     def __init__(self,
         prompt_file: Path,
-        history_limit: int,
+        history_limit: int = 20,
         model_name: str = 'gpt-4.1',
         tool_box: ToolBox = None,
         helper_agents: list['Agent'] = [],
@@ -92,7 +92,6 @@ class Agent:
                         "output": json.dumps(result)
                     })
     
-
     def reset(self):
         self._history = deque(maxlen=self._history_limit)
 
@@ -102,7 +101,6 @@ class Agent:
 
         Inputs are read from stdin until an empty line or 'exit' is entered.
         """
-        # Provide a sensible default callback if none was supplied
         if callback is None:
             callback = lambda *args: print(
                 '\nAI:',
@@ -114,7 +112,6 @@ class Agent:
             while user_msg := self._get_user_input():
                 callback(self.chat_once(user_msg))
         except KeyboardInterrupt:
-            # Graceful exit on Ctrl-C
             print('\nRun interrupted by user (KeyboardInterrupt)')
     
     def chat_once(self, user_msg: str) -> str:
@@ -123,16 +120,13 @@ class Agent:
 
         Returns the agent's response text.
         """
-        # append the user message (deque enforces maxlen)
         self._history.append({ 'role': 'user', 'content': user_msg })
 
-        while True:
+        while True: # loop to accommodate tool calls
             response = self._get_agent_response()
-            # response.output is a list-like sequence of message pieces; extend the deque
             try:
                 self._history.extend(response.output)
             except TypeError:
-                # fallback: append the whole output if it's not iterable
                 self._history.append(response.output)
 
             if not any(
@@ -141,7 +135,6 @@ class Agent:
                 break
             self._handle_tool_calls(response.output)
 
-        # history length is enforced by deque(maxlen=...)
         return response.output_text
     
 
