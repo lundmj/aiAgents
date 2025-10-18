@@ -43,7 +43,6 @@ class Agent:
 
     @property
     def full_history(self) -> list[dict]:
-        # self._history is a deque; convert to list for concatenation
         return self._system_messages + list(self._history)
 
     def _add_helper_agents(self):
@@ -55,12 +54,6 @@ class Agent:
         self._tool_box = agent_tool_box | self._tool_box
 
     def _build_agent_tool(self, agent: "Agent", index: int) -> tuple[str, Callable]:
-        """Create a uniquely named wrapper for a helper agent's chat_once.
-
-        Returns (unique_name, wrapper_callable). The wrapper forwards calls to
-        the helper's bound method and has its own docstring (so descriptions
-        don't accumulate on a shared function object).
-        """
         unique_name = f"{agent.__class__.__name__}_chat_once_{index}"
         desc_suffix = f"\n\nDescription: {agent._description}"
 
@@ -101,7 +94,6 @@ class Agent:
     
 
     def reset(self):
-        # Use deque to automatically enforce history length (maxlen)
         self._history = deque(maxlen=self._history_limit)
     
     def run(self,
