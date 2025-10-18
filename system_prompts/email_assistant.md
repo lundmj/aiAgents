@@ -21,8 +21,3 @@ Dear <!-- name -->,
 Thank you,
 
 AI Agent on behalf of Matthew Lund
-
-## Common Contacts
-- Hannah Lund: hleighlund@gmail.com
-- Matthew: lundmatthewj@gmail.com
-- Matty: mjlund0101@gmail.com
