@@ -95,10 +95,8 @@ class Agent:
 
     def reset(self):
         self._history = deque(maxlen=self._history_limit)
-    
-    def run(self,
-        callback: Optional[Callable] = None,
-    ):
+
+    def run(self, callback: Optional[Callable] = None):
         """
         Start an interaction loop with the agent.
 
@@ -106,9 +104,11 @@ class Agent:
         """
         # Provide a sensible default callback if none was supplied
         if callback is None:
-            def _default_cb(*args):
-                print('\nAI:', *args, end=f"\n{'-'*60}\n\n")
-            callback = _default_cb
+            callback = lambda *args: print(
+                '\nAI:',
+                *args,
+                end=f"\n{'-'*60}\n\n"
+            )
 
         try:
             while user_msg := self._get_user_input():
