@@ -60,12 +60,7 @@ class Agent:
         @functools.wraps(agent.chat_once)
         def wrapper(*args, **kwargs):
             return agent.chat_once(*args, **kwargs)
-
-        try:
-            wrapper.__doc__ = (agent.chat_once.__doc__ or "") + desc_suffix
-        except Exception:
-            # Non-fatal: continue even if docstring can't be set
-            pass
+        wrapper.__doc__ = (agent.chat_once.__doc__ or "") + desc_suffix
 
         return unique_name, wrapper
 
