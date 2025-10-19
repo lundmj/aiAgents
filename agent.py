@@ -25,7 +25,7 @@ class Agent:
         model_name: str = 'gpt-4.1',
         tool_box: ToolBox = None,
         helper_agents: list['Agent'] = [],
-        description: str = 'A helpful assistant.',
+        description: str = '',
         verbose: bool = False,
     ):
         self.client = OpenAI()
@@ -55,7 +55,7 @@ class Agent:
 
     def _build_agent_tool(self, agent: "Agent", index: int) -> tuple[str, Callable]:
         unique_name = f"{agent.__class__.__name__}_chat_once_{index}"
-        desc_suffix = f"\n\nDescription: {agent._description}"
+        desc_suffix = f"\n\nDescription: {agent._description}" if agent._description else ""
 
         @functools.wraps(agent.chat_once)
         def wrapper(*args, **kwargs):
