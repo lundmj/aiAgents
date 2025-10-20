@@ -1,4 +1,4 @@
-# CS401R Project: AI Agent Framework
+# Personal Project: AI Agent Framework
 
 A modular and extensible framework for building AI agents capable of interacting with users, managing tools, and delegating tasks to helper agents. The project is designed for flexibility, maintainability, and ease of integration with tools.
 
