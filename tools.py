@@ -9,8 +9,11 @@ from tool_box import ToolBox
 
 SCOPES = ["https://www.googleapis.com/auth/calendar.events"]
 
+
 email_tool_box = ToolBox()
 calendar_tool_box = ToolBox()
+rag_tool_box = ToolBox()
+audio_tool_box = ToolBox()
 
 def get_creds():
     """
