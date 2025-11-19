@@ -6,7 +6,7 @@ import speech_recognition as sr
 from openai import AsyncOpenAI
 from openai.helpers import LocalAudioPlayer
 
-from agent import Agent
+from agentics_lundmj.agent import Agent
 
 
 def text_to_speech(*text) -> str:
@@ -74,4 +74,5 @@ guesser = Agent(
 def main():
     guesser.run(
         input_fn=audio_input,
+        callback_fn=text_to_speech,
     )

@@ -5,15 +5,21 @@ from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 from datetime import datetime
 
-from tool_box import ToolBox
+from agentics_lundmj.tool_box import ToolBox
 
 SCOPES = ["https://www.googleapis.com/auth/calendar.events"]
 
+# Current directory
+current_dir = os.path.dirname(os.path.abspath(__file__))
 
+# Tool boxes
 email_tool_box = ToolBox()
 calendar_tool_box = ToolBox()
 rag_tool_box = ToolBox()
 audio_tool_box = ToolBox()
+property_tool_box = ToolBox(
+    log_file=os.path.join(current_dir, "log", "property_tool_calls.log")
+)
 
 def get_creds():
     """
@@ -76,6 +82,66 @@ def get_tz_name() -> str:
         pass
 
     return "UTC"
+
+@property_tool_box.tool
+def grade_reply(
+    platform_score: int,
+    platform_rationale: str,
+    question_score: int,
+    question_rationale: str,
+    professionalism_score: int,
+    professionalism_rationale: str,
+    personalization_score: int,
+    personalization_rationale: str,
+    legal_score: int,
+    legal_rationale: str,
+    actionability_score: int,
+    actionability_rationale: str,
+) -> str:
+    """
+    Create a grade report for a reply from a leasing agent. Scores range between 1-5.
+
+    platform: How appropriate the reply is for the platform (email vs. facebook)
+    question: How well the reply answers the questions asked
+    professionalism: How professional the reply is
+    personalization: How personalized the reply is
+    legal: The degree to which the reply follows legal guidelines
+    actionability: How actionable the reply is
+
+    Returns whether the report successfully generated.
+    """
+    if not all(
+        1 <= score <= 5 for score in [
+            platform_score,
+            question_score,
+            professionalism_score,
+            personalization_score,
+            legal_score,
+            actionability_score,
+        ]
+    ):
+        return "Failure: All scores must be between 1 and 5."
+    if not all(
+        rationale.strip() for rationale in [
+            platform_rationale,
+            question_rationale,
+            professionalism_rationale,
+            personalization_rationale,
+            legal_rationale,
+            actionability_rationale,
+        ]
+    ):
+        return "Failure: All rationales must be provided."
+    print(
+        f"--- Grade Report ---\n"
+        f"Platform: {platform_score} - {platform_rationale}\n"
+        f"Question: {question_score} - {question_rationale}\n"
+        f"Professionalism: {professionalism_score} - {professionalism_rationale}\n"
+        f"Personalization: {personalization_score} - {personalization_rationale}\n"
+        f"Legal: {legal_score} - {legal_rationale}\n"
+        f"Actionability: {actionability_score} - {actionability_rationale}\n"
+    )
+    return "Success: Grade report generated."
 
 @calendar_tool_box.tool
 def create_calendar_event(

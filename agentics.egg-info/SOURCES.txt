@@ -1,0 +1,10 @@
+README.md
+setup.py
+agentics/__init__.py
+agentics/agent.py
+agentics/tool_box.py
+agentics.egg-info/PKG-INFO
+agentics.egg-info/SOURCES.txt
+agentics.egg-info/dependency_links.txt
+agentics.egg-info/requires.txt
+agentics.egg-info/top_level.txt

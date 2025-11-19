@@ -3,7 +3,7 @@ import argparse
 from pathlib import Path
 
 import tools
-from agent import Agent
+from agentics_lundmj.agent import Agent
 
 from dotenv import load_dotenv
 load_dotenv()
