@@ -120,6 +120,19 @@ class Agent(AIInteractable):
         self._trim_history()
         return response.output_text
     
+    def chat_once_dry(self, msg: str) -> str:
+        """
+        Send a message to the agent without any history. Does not modify history or
+        use existing history.
+        
+        Returns the agent's response text.
+        """
+        saved_history = self._history
+        self.reset()
+        response_text = self.chat_once(msg)
+        self._history = saved_history
+        return response_text
+    
 
 class AgentSequence(AIInteractable):
     """
