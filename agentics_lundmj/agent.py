@@ -1,3 +1,4 @@
+from collections import deque
 import json
 import functools
 from pathlib import Path
@@ -22,6 +23,7 @@ class Agent(AIInteractable):
     def __init__(self,
         prompt_file: Path | str,
         history_limit: int = 20,
+        history_limit_strict: bool = False,
         model_name: str = 'gpt-4.1',
         tool_box: ToolBox = None,
         helper_agents: list['Agent'] = [],
@@ -29,6 +31,7 @@ class Agent(AIInteractable):
         verbose: bool = False,
     ):
         self.client = OpenAI()
+        self._history_limit_strict = history_limit_strict
         self._model_name = model_name
         self._tool_box = tool_box
         self._helper_agents = helper_agents
@@ -87,9 +90,14 @@ class Agent(AIInteractable):
             agent.reset()
     
     def shallow_reset(self):
-        self._history = []
+        if self._history_limit_strict:
+            self._history = deque(maxlen=self._history_limit)
+        else:
+            self._history = []
     
     def _trim_history(self):
+        if self._history_limit_strict:
+            return  # deque already enforces limit
         self._history = self._history[-self._history_limit:]
     
     def chat_once(self, msg: str) -> str:
