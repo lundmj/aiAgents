@@ -1,9 +1,8 @@
 import json
 import functools
-from collections import deque
 from pathlib import Path
 from openai import OpenAI
-from typing import Callable, Optional
+from typing import Callable
 
 from .tool_box import ToolBox
 from .agent_base import AIInteractable
@@ -88,7 +87,10 @@ class Agent(AIInteractable):
             agent.reset()
     
     def shallow_reset(self):
-        self._history = deque(maxlen=self._history_limit)
+        self._history = []
+    
+    def _trim_history(self):
+        self._history = self._history[-self._history_limit:]
     
     def chat_once(self, msg: str) -> str:
         """
@@ -97,20 +99,17 @@ class Agent(AIInteractable):
         Returns the agent's response text.
         """
         self._history.append({ 'role': 'user', 'content': msg })
-
         while True: # loop to accommodate tool calls
             response = self._get_agent_response()
             try:
                 self._history.extend(response.output)
             except TypeError:
                 self._history.append(response.output)
-
             if not any(
                 item.type == 'function_call' for item in response.output
             ): break
-
             self._handle_tool_calls(response.output)
-
+        self._trim_history()
         return response.output_text
     
 
